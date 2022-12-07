@@ -47,16 +47,30 @@ module.exports.create = function(req,res){
 module.exports.createsession  =  function(req,res,next){
     User.findOne({ email: req.body.email }, function(err, user){
         console.log(req.body);
-        let todaydate = Date();
-        console.log(todaydate + "```````````````this is todays date");
+        let todaydate = new Date();
+        console.log(todaydate.getTime() + "```````````````this is todays date");
         if(err){console.log('error finding user'); return}
         // if user found
         if(user){
-            
-            if(user.time > todaydate){
+            console.log(
+                new Date(user.time).getTime() + "--------------this is user.date");
+            if(user.time != null &&
+                new Date(user.time).getTime() > todaydate.getTime()){
                      console.log("first if statement******************************************************")
                 return res.redirect("/failed");
-            }
+            }else if (
+                user.time != null &&
+                new Date(user.time).getTime() < todaydate.getTime()
+              ) {
+                User.findOneAndUpdate(
+                  { email: req.body.email },
+                  { $set: { time: null } },
+                  { new: true },
+                  (user) => {
+                    console.log(user);
+                  }
+                );
+              }
            // IF PASSWORD DOESN'T MATCH
            if(user.password != req.body.password ){
           // update the login value by one
@@ -68,8 +82,9 @@ module.exports.createsession  =  function(req,res,next){
            // starting a timer of 24 hrs to and reset the login var after  failed attempts
            // last time I used Settimeout but that won't be useful if server goes down
             if(user.login == 4){            
-                let PlusTwentyFourHours =new Date(new Date().getTime() + 60 * 60 * 24 * 1000); // CHANGE HERE FOR TESTING 
-                User.findOneAndUpdate({email: req.body.email},{$set:{time:PlusTwentyFourHours,"login":0}},{new:true},(result)=>{
+                let PlusTwentyFourHours = new Date().getTime() + 60 * 60 * 24 * 1000; // CHANGE HERE FOR TESTING 
+                PlusTwentyFourHours = new Date(PlusTwentyFourHours);
+                User.findOneAndUpdate({email: req.body.email},{$set:{time:PlusTwentyFourHours,login:0}},{new:true},(result)=>{
                             console.log(result);
                         })
                 return res.redirect('/failed');
@@ -77,9 +92,9 @@ module.exports.createsession  =  function(req,res,next){
                return res.redirect('back');
            }
            // allow login only if the value of login var is less than defined attempts(5 here)
-         if(user.login < 5 && user.time < todaydate){
+         if(user.login < 5){
             // setting the value of login var 0 if user is successful to login within 5 attempts 
-            User.findOneAndUpdate({email: req.body.email},{$set:{"login":0}},(result)=>{
+            User.findOneAndUpdate({email: req.body.email},{$set:{login:0}},(result)=>{
                 console.log(result);
             })
             console.log(user.login+" user login var value");
